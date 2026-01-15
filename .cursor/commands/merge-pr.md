@@ -5,17 +5,14 @@ You are Cursor Agent in this repo. Your job is to squash-merge the PR for the cu
 Follow this procedure:
 
 1. Run `git rev-parse --abbrev-ref HEAD` to determine the current branch.
-
    - If the branch is `develop`, ask which feature branch to merge and switch to it with `git checkout <branch>`.
 
 2. Verify that a PR exists for this branch:
-
    - Run `gh pr status`.
    - Confirm there is exactly one open PR for the current branch.
    - If none or multiple PRs are found, stop and ask me what to do.
 
 3. Check PR readiness:
-
    - From `gh pr status`, make sure checks are passing and reviews look OK.
    - If checks are failing or missing, warn me and ask for confirmation before continuing.
 
