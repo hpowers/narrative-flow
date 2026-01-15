@@ -62,3 +62,5 @@ uv.lock
 # Project files
 PUBLISHING.md
 TODO.md
+.linear.toml
+.claude
