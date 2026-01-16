@@ -68,6 +68,23 @@ class TestGenerateLog:
         assert "### summary" in log
         assert "Testing ensures code quality." in log
 
+    def test_logs_list_outputs_as_json(self):
+        """List outputs are rendered as JSON arrays."""
+        result = WorkflowResult(
+            workflow_name="list_output",
+            inputs={},
+            outputs={"items": ["alpha", "beta"]},
+            step_results=[],
+            conversation_history=[],
+            success=True,
+        )
+
+        log = generate_log(result)
+
+        assert "### items" in log
+        assert '"alpha"' in log
+        assert '"beta"' in log
+
     def test_generates_conversation_section(self, successful_workflow_result: WorkflowResult):
         """
         Logs include a Conversation section with each step's details.
@@ -274,6 +291,32 @@ class TestStepResultLogging:
         assert "Extract the main keyword" in log
         assert "**Extracted Value (`keyword`):**" in log
         assert "testing" in log
+
+    def test_logs_extract_step_with_list_value(self):
+        """Extract steps render list values as JSON arrays."""
+        step = Step(
+            type=StepType.EXTRACT,
+            name="Extract: items",
+            content="Extract items",
+            variable_name="items",
+        )
+        step_result = StepResult(
+            step=step,
+            extracted_value=["alpha", "beta"],
+        )
+        result = WorkflowResult(
+            workflow_name="test",
+            inputs={},
+            outputs={},
+            step_results=[step_result],
+            conversation_history=[],
+            success=True,
+        )
+
+        log = generate_log(result)
+
+        assert '"alpha"' in log
+        assert '"beta"' in log
 
     def test_logs_assistant_step_only(self):
         """Assistant steps show only the assistant content."""

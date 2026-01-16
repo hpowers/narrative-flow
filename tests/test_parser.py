@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from narrative_flow import StepType, parse_workflow
+from narrative_flow import StepType, ValueType, parse_workflow
 from narrative_flow.parser import WorkflowParseError
 
 # =============================================================================
@@ -85,6 +85,7 @@ class TestParseValidWorkflows:
         assert len(workflow.outputs) == 1
         assert workflow.outputs[0].name == "summary"
         assert workflow.outputs[0].description == "A brief summary of the topic"
+        assert workflow.outputs[0].type == ValueType.STRING
 
     def test_parses_message_steps(self, minimal_workflow_content: str):
         """
@@ -514,6 +515,7 @@ models:
   extraction: openai/gpt-4o-mini
 outputs:
   - description: Missing name
+    type: string
 ---
 
 ## Step
@@ -521,6 +523,50 @@ outputs:
 Hello
 """
         with pytest.raises(WorkflowParseError, match=r"output.*name"):
+            parse_workflow(content)
+
+    def test_defaults_output_type_to_string(self):
+        """Outputs default to string type when type is omitted."""
+        content = """\
+---
+name: output_default_type
+models:
+  conversation: openai/gpt-4o
+  extraction: openai/gpt-4o-mini
+outputs:
+  - name: summary
+    description: No explicit type
+---
+
+## Step
+
+Hello
+
+## Extract: summary
+
+Extract a summary.
+"""
+        workflow = parse_workflow(content)
+        assert workflow.outputs[0].type == ValueType.STRING
+
+    def test_raises_for_invalid_output_type(self):
+        """WorkflowParseError is raised when an output type is invalid."""
+        content = """\
+---
+name: output_invalid_type
+models:
+  conversation: openai/gpt-4o
+  extraction: openai/gpt-4o-mini
+outputs:
+  - name: summary
+    type: stringish
+---
+
+## Step
+
+Hello
+"""
+        with pytest.raises(WorkflowParseError, match="Invalid output type"):
             parse_workflow(content)
 
 

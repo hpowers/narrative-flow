@@ -62,6 +62,7 @@ inputs:
 outputs:
   - name: summary
     description: A summary of the discussion
+    type: string
 ---
 
 ## Initial Question
@@ -74,7 +75,7 @@ Which of those facts do you think is most surprising to most people, and why?
 
 ## Extract: summary
 
-Summarize the most surprising fact in one sentence. Return only the sentence.
+Summarize the most surprising fact in one sentence.
 ```
 
 ### 3. Run the workflow
@@ -137,6 +138,7 @@ inputs:
 outputs:
   - name: var_name # Must match an Extract step
     description: What it is # Optional
+    type: string # Optional: string | string_list (default: string)
 ---
 ```
 
@@ -174,10 +176,17 @@ Provide a few-shot assistant response.
 ## Extract: result_var
 
 Natural language instruction for what to extract.
-Return only the value, no explanation.
+Return only the extracted value, no explanation.
 ```
 
 The extracted value is stored and can be used in subsequent steps as `{{ result_var }}`.
+
+### Output Types
+
+Outputs are typed so extraction is deterministic (the extractor enforces JSON formatting automatically):
+
+- `string` -> extraction must return a JSON string (e.g., `"value"`)
+- `string_list` -> extraction must return a JSON array of strings (e.g., `["a", "b"]`)
 
 ### Template Strictness
 
@@ -214,7 +223,7 @@ The result object contains:
 ```python
 result.success           # bool: whether execution succeeded
 result.error             # str | None: error message if failed
-result.outputs           # dict: extracted output values
+result.outputs           # dict: extracted output values (str or list[str])
 result.inputs            # dict: input values used
 result.conversation_history  # list[Message]: full conversation
 result.step_results      # list[StepResult]: per-step details
@@ -240,6 +249,7 @@ See the `examples/` directory for complete workflow examples:
 | ---------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
 | `topic_explainer.workflow.md`      | Explore any topic and extract key insights                                 | `topic`                                  |
 | `blog_post_generator.workflow.md`  | Full blog post with iterative refinement—shows mid-conversation extraction | `subject`, `audience`, `tone`            |
+| `key_takeaways_list.workflow.md`   | Extract a list of concise takeaways                                        | `topic`                                  |
 | `youtube_short_titler.workflow.md` | Generate titles/descriptions using MrBeast's principles                    | `short_transcript`, `episode_transcript` |
 | `few_shot_assistant.workflow.md`   | Demonstrate explicit User/Assistant steps with few-shot prompting          | `product`                                |
 

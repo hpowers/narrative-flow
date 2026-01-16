@@ -30,6 +30,7 @@ from .models import (
     Step,
     StepResult,
     StepType,
+    ValueType,
     WorkflowDefinition,
     WorkflowResult,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "InputVariable",
     "OutputVariable",
     "ModelsConfig",
+    "ValueType",
     # Exceptions
     "WorkflowParseError",
     "WorkflowExecutionError",

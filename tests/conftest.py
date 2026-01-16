@@ -18,6 +18,7 @@ from narrative_flow import (
     Step,
     StepResult,
     StepType,
+    ValueType,
     WorkflowDefinition,
     WorkflowResult,
 )
@@ -112,6 +113,7 @@ inputs:
 outputs:
   - name: summary
     description: A brief summary of the topic
+    type: string
 ---
 
 ## Explain the Topic
@@ -151,6 +153,7 @@ def workflow_with_inputs_and_outputs() -> WorkflowDefinition:
             OutputVariable(
                 name="summary",
                 description="A brief summary of the topic",
+                type=ValueType.STRING,
             ),
         ],
         steps=[
@@ -188,8 +191,10 @@ inputs:
 outputs:
   - name: strength
     description: The candidate's main strength
+    type: string
   - name: improvement
     description: Area for improvement
+    type: string
 ---
 
 ## Introduction
@@ -403,6 +408,7 @@ models:
 outputs:
   - name: summary
     description: A summary that has no extract step
+    type: string
 ---
 
 ## Just a Message

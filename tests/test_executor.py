@@ -22,6 +22,7 @@ from narrative_flow import (
     OutputVariable,
     Step,
     StepType,
+    ValueType,
     WorkflowDefinition,
     execute_workflow,
 )
@@ -303,7 +304,7 @@ class TestExecuteWorkflow:
         The rendered content appears in the conversation history.
         """
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Python is great for..."}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "Python is versatile."}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"Python is versatile."'}}]})
 
         result = execute_workflow(
             workflow_with_inputs_and_outputs,
@@ -366,7 +367,7 @@ class TestExecuteWorkflow:
         # First response: conversation
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Here's the explanation..."}}]})
         # Second response: extraction
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "This is the summary."}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"This is the summary."'}}]})
 
         result = execute_workflow(
             workflow_with_inputs_and_outputs,
@@ -391,7 +392,7 @@ class TestExecuteWorkflow:
             name="chained_extraction",
             models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
             inputs=[InputVariable(name="topic")],
-            outputs=[OutputVariable(name="keyword")],
+            outputs=[OutputVariable(name="keyword", type=ValueType.STRING)],
             steps=[
                 Step(type=StepType.MESSAGE, name="Get Info", content="Tell me about {{ topic }}"),
                 Step(
@@ -405,7 +406,7 @@ class TestExecuteWorkflow:
         )
 
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Info about ML..."}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "neural networks"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"neural networks"'}}]})
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Deep dive into neural networks..."}}]})
 
         result = execute_workflow(workflow, {"topic": "machine learning"})
@@ -471,7 +472,7 @@ class TestExecuteWorkflow:
         This provides visibility into what happened at each step.
         """
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Explanation"}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "Summary"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"Summary"'}}]})
 
         result = execute_workflow(workflow_with_inputs_and_outputs, {"topic": "test"})
 
@@ -509,7 +510,7 @@ class TestExecuteWorkflow:
     ):
         """Input values are recorded in the result."""
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "Summary"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"Summary"'}}]})
 
         result = execute_workflow(
             workflow_with_inputs_and_outputs,
@@ -587,7 +588,7 @@ class TestExtractStep:
                 conversation="openai/gpt-4o",  # Conversation model
                 extraction="openai/gpt-4o-mini",  # Extraction model
             ),
-            outputs=[OutputVariable(name="result")],
+            outputs=[OutputVariable(name="result", type=ValueType.STRING)],
             steps=[
                 Step(type=StepType.MESSAGE, name="Ask", content="Hello"),
                 Step(type=StepType.EXTRACT, name="Extract: result", content="Extract", variable_name="result"),
@@ -595,7 +596,7 @@ class TestExtractStep:
         )
 
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "Extracted"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"Extracted"'}}]})
 
         execute_workflow(workflow, {})
 
@@ -616,7 +617,7 @@ class TestExtractStep:
         workflow = WorkflowDefinition(
             name="test",
             models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
-            outputs=[OutputVariable(name="value")],
+            outputs=[OutputVariable(name="value", type=ValueType.STRING)],
             steps=[
                 Step(type=StepType.MESSAGE, name="Ask", content="Hello"),
                 Step(type=StepType.EXTRACT, name="Extract: value", content="Extract", variable_name="value"),
@@ -624,11 +625,59 @@ class TestExtractStep:
         )
 
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "  extracted value  \n"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '  "extracted value"  \n'}}]})
 
         result = execute_workflow(workflow, {})
 
         assert result.outputs["value"] == "extracted value"
+
+    def test_extraction_parses_string_list(
+        self,
+        httpx_mock: HTTPXMock,
+        api_key_env: None,
+    ):
+        """Extracted list outputs are parsed from JSON arrays."""
+        workflow = WorkflowDefinition(
+            name="test",
+            models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
+            outputs=[OutputVariable(name="items", type=ValueType.STRING_LIST)],
+            steps=[
+                Step(type=StepType.MESSAGE, name="Ask", content="List items"),
+                Step(type=StepType.EXTRACT, name="Extract: items", content="Extract items", variable_name="items"),
+            ],
+        )
+
+        httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '["alpha", "beta"]'}}]})
+
+        result = execute_workflow(workflow, {})
+
+        assert result.outputs["items"] == ["alpha", "beta"]
+        assert result.step_results[1].extracted_value == ["alpha", "beta"]
+
+    def test_extraction_rejects_invalid_list_type(
+        self,
+        httpx_mock: HTTPXMock,
+        api_key_env: None,
+    ):
+        """List outputs must be JSON arrays of strings."""
+        workflow = WorkflowDefinition(
+            name="test",
+            models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
+            outputs=[OutputVariable(name="items", type=ValueType.STRING_LIST)],
+            steps=[
+                Step(type=StepType.MESSAGE, name="Ask", content="List items"),
+                Step(type=StepType.EXTRACT, name="Extract: items", content="Extract items", variable_name="items"),
+            ],
+        )
+
+        httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"not a list"'}}]})
+
+        result = execute_workflow(workflow, {})
+
+        assert result.success is False
+        assert "array of strings" in (result.error or "").lower()
 
     def test_extraction_fails_without_conversation_history(
         self,
@@ -642,7 +691,7 @@ class TestExtractStep:
         workflow = WorkflowDefinition(
             name="test",
             models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
-            outputs=[OutputVariable(name="value")],
+            outputs=[OutputVariable(name="value", type=ValueType.STRING)],
             steps=[
                 # Extract without any prior message
                 Step(type=StepType.EXTRACT, name="Extract: value", content="Extract", variable_name="value"),
@@ -717,7 +766,7 @@ class TestConversationHistory:
         workflow = WorkflowDefinition(
             name="extract_test",
             models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
-            outputs=[OutputVariable(name="keyword")],
+            outputs=[OutputVariable(name="keyword", type=ValueType.STRING)],
             steps=[
                 Step(type=StepType.MESSAGE, name="First", content="Hello"),
                 Step(
@@ -728,7 +777,7 @@ class TestConversationHistory:
         )
 
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Response 1"}}]})
-        httpx_mock.add_response(json={"choices": [{"message": {"content": "extracted"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '"extracted"'}}]})
         httpx_mock.add_response(json={"choices": [{"message": {"content": "Response 2"}}]})
 
         result = execute_workflow(workflow, {})

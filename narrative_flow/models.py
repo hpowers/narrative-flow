@@ -13,6 +13,13 @@ class StepType(str, Enum):
     EXTRACT = "extract"
 
 
+class ValueType(str, Enum):
+    """Supported variable types for inputs/outputs."""
+
+    STRING = "string"
+    STRING_LIST = "string_list"
+
+
 class InputVariable(BaseModel):
     """An input variable for the workflow."""
 
@@ -27,6 +34,7 @@ class OutputVariable(BaseModel):
 
     name: str
     description: str | None = None
+    type: ValueType
 
 
 class ModelsConfig(BaseModel):
@@ -78,7 +86,7 @@ class StepResult(BaseModel):
     step: Step
     user_message: str | None = None  # For message steps
     assistant_response: str | None = None  # For message steps
-    extracted_value: str | None = None  # For extract steps
+    extracted_value: str | list[str] | None = None  # For extract steps
 
 
 class WorkflowResult(BaseModel):
@@ -86,7 +94,7 @@ class WorkflowResult(BaseModel):
 
     workflow_name: str
     inputs: dict[str, Any]
-    outputs: dict[str, str]
+    outputs: dict[str, str | list[str]]
     step_results: list[StepResult]
     conversation_history: list[Message]
     success: bool
