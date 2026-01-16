@@ -1,8 +1,8 @@
 name: Promote develop -> main
 
 on:
-  push:
-    branches: [develop]
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -10,11 +10,13 @@ permissions:
 
 jobs:
   promote:
+    if: ${{ github.event.release.target_commitish == 'develop' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: develop
 
       - name: Create or update PR develop -> main
         uses: peter-evans/create-pull-request@v6
