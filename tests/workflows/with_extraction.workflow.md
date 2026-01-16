@@ -21,6 +21,7 @@ inputs:
 outputs:
   - name: best_fact
     description: The most interesting fact extracted
+    type: string
 ---
 
 ## Get Facts

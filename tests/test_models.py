@@ -20,6 +20,7 @@ from narrative_flow import (
     Step,
     StepResult,
     StepType,
+    ValueType,
     WorkflowDefinition,
     WorkflowResult,
 )
@@ -110,18 +111,37 @@ class TestOutputVariable:
     """Tests for the OutputVariable model."""
 
     def test_creates_with_name_only(self):
-        """OutputVariable can be created with just a name."""
-        var = OutputVariable(name="result")
+        """OutputVariable can be created with a name and type."""
+        var = OutputVariable(name="result", type=ValueType.STRING)
 
         assert var.name == "result"
         assert var.description is None
+        assert var.type == ValueType.STRING
 
     def test_creates_with_description(self):
         """OutputVariable can have a description."""
-        var = OutputVariable(name="summary", description="A brief summary")
+        var = OutputVariable(name="summary", description="A brief summary", type=ValueType.STRING)
 
         assert var.name == "summary"
         assert var.description == "A brief summary"
+        assert var.type == ValueType.STRING
+
+
+# =============================================================================
+# ValueType Enum Tests
+# =============================================================================
+
+
+class TestValueType:
+    """Tests for the ValueType enumeration."""
+
+    def test_string_value(self):
+        """STRING value type uses 'string'."""
+        assert ValueType.STRING.value == "string"
+
+    def test_string_list_value(self):
+        """STRING_LIST value type uses 'string_list'."""
+        assert ValueType.STRING_LIST.value == "string_list"
 
 
 # =============================================================================
@@ -234,7 +254,7 @@ class TestWorkflowDefinition:
             ),
             retries=5,
             inputs=[InputVariable(name="input1")],
-            outputs=[OutputVariable(name="output1")],
+            outputs=[OutputVariable(name="output1", type=ValueType.STRING)],
             steps=[
                 Step(type=StepType.MESSAGE, name="Step 1", content="Hello"),
             ],
@@ -308,8 +328,8 @@ class TestWorkflowDefinition:
                 extraction="openai/gpt-4o-mini",
             ),
             outputs=[
-                OutputVariable(name="summary"),
-                OutputVariable(name="keywords"),
+                OutputVariable(name="summary", type=ValueType.STRING),
+                OutputVariable(name="keywords", type=ValueType.STRING_LIST),
             ],
         )
 

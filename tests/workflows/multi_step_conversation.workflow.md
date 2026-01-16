@@ -21,8 +21,10 @@ inputs:
 outputs:
   - name: initial_idea
     description: The first idea generated
+    type: string
   - name: refined_idea
     description: The refined version of the idea
+    type: string
 ---
 
 ## Generate Initial Ideas

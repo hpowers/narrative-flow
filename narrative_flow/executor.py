@@ -1,5 +1,6 @@
 """Executor for running workflows via OpenRouter."""
 
+import json
 import os
 import time
 from typing import Any
@@ -12,6 +13,7 @@ from .models import (
     Step,
     StepResult,
     StepType,
+    ValueType,
     WorkflowDefinition,
     WorkflowResult,
 )
@@ -122,6 +124,7 @@ def execute_workflow(
 
         # State for execution
         variables = dict(inputs_copy)
+        output_types = {output.name: output.type for output in workflow.outputs}
         client: OpenRouterClient | None = None
 
         def _get_client() -> OpenRouterClient:
@@ -155,6 +158,7 @@ def execute_workflow(
                     client=_get_client(),
                     model=workflow.models.extraction,
                     retries=workflow.retries,
+                    expected_type=output_types.get(step.variable_name or "", ValueType.STRING),
                 )
 
             step_results.append(result)
@@ -173,7 +177,7 @@ def execute_workflow(
         )
 
     except Exception as e:
-        outputs: dict[str, str] = {}
+        outputs: dict[str, str | list[str]] = {}
         for name in workflow.get_output_names():
             if name in variables:
                 outputs[name] = variables[name]
@@ -277,6 +281,7 @@ def _execute_extract_step(
     client: OpenRouterClient,
     model: str,
     retries: int,
+    expected_type: ValueType,
 ) -> StepResult:
     """Execute an extraction step."""
     if not conversation_history:
@@ -296,6 +301,7 @@ def _execute_extract_step(
     rendered_instruction = _render_template(step.content, variables)
 
     # Build extraction prompt
+    type_instruction = _render_extraction_type_instruction(expected_type)
     extraction_prompt = f"""Here is a response from an AI assistant:
 
 <response>
@@ -304,19 +310,53 @@ def _execute_extract_step(
 
 Your task: {rendered_instruction}
 
-Return ONLY the extracted value with no additional text, explanation, or formatting."""
+Return ONLY valid JSON {type_instruction} with no additional text, explanation, or formatting."""
 
     # Call extraction model (single turn, no history)
     api_messages = [{"role": "user", "content": extraction_prompt}]
     extracted_value = client.chat(model=model, messages=api_messages, retries=retries)
-
-    # Clean up the extracted value (strip whitespace)
-    extracted_value = extracted_value.strip()
+    parsed_value = _parse_extracted_value(extracted_value, expected_type, step.variable_name or "unknown")
 
     # Store in variables
-    variables[step.variable_name] = extracted_value
+    variables[step.variable_name] = parsed_value
 
     return StepResult(
         step=step,
-        extracted_value=extracted_value,
+        extracted_value=parsed_value,
     )
+
+
+def _render_extraction_type_instruction(expected_type: ValueType) -> str:
+    """Render type-specific instruction for extraction output."""
+    match expected_type:
+        case ValueType.STRING:
+            return 'as a JSON string (e.g., "value")'
+        case ValueType.STRING_LIST:
+            return 'as a JSON array of strings (e.g., ["first", "second"])'
+        case _:
+            return f"matching type {expected_type.value}"
+
+
+def _parse_extracted_value(raw_value: str, expected_type: ValueType, variable_name: str) -> str | list[str]:
+    """Parse and validate extracted JSON based on expected type."""
+    cleaned_value = raw_value.strip()
+    try:
+        parsed_value = json.loads(cleaned_value)
+    except json.JSONDecodeError as e:
+        raise WorkflowExecutionError(f"Extraction for '{variable_name}' returned invalid JSON: {e.msg}") from e
+
+    if expected_type == ValueType.STRING:
+        if isinstance(parsed_value, str):
+            return parsed_value
+        raise WorkflowExecutionError(
+            f"Extraction for '{variable_name}' must be a JSON string, got {type(parsed_value).__name__}"
+        )
+
+    if expected_type == ValueType.STRING_LIST:
+        if isinstance(parsed_value, list) and all(isinstance(item, str) for item in parsed_value):
+            return parsed_value
+        raise WorkflowExecutionError(
+            f"Extraction for '{variable_name}' must be a JSON array of strings, got {type(parsed_value).__name__}"
+        )
+
+    raise WorkflowExecutionError(f"Unsupported output type for '{variable_name}': {expected_type.value}")
