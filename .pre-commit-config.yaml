@@ -39,3 +39,4 @@ repos:
     rev: typos-dict-v0.12.4
     hooks:
       - id: typos
+        exclude: ^CHANGELOG\.md$
