@@ -1,0 +1,28 @@
+name: Promote develop -> main
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or update PR develop -> main
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          base: main
+          branch: chore/promote-develop-to-main
+          title: "chore: promote develop to main"
+          body: |
+            Automated promotion PR to bring main up to date with develop.
+            This PR should typically be merged after a release is prepared/merged on develop.
