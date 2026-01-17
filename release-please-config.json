@@ -4,7 +4,7 @@
     ".": {
       "release-type": "simple",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": ["pyproject.toml"],
+      "extra-files": ["pyproject.toml", "narrative_flow/__init__.py"],
       "changelog-sections": [
         { "type": "feat", "section": "Features" },
         { "type": "fix", "section": "Bug Fixes" },
