@@ -4,7 +4,7 @@ Human-readable LLM conversation workflows that can be automated with Python.
 
 ## Overview
 
-Narrative Flow lets you define multi-turn LLM conversations in a simple Markdown format, then execute them programmatically. This is useful when you've developed a workflow interactively (in ChatGPT, Claude, Google AI Studio, etc.) and want to automate it.
+Narrative Flow lets you define multi-turn LLM conversations in a simple Markdown format, then run them programmatically. This is useful when you've developed a workflow interactively (in ChatGPT, Claude, Google AI Studio, etc.) and want to automate it.
 
 **Key features:**
 
