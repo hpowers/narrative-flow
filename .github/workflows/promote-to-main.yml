@@ -35,11 +35,11 @@ jobs:
           if [ -n "$pr_number" ]; then
             gh pr edit -R "$GH_REPO" "$pr_number" \
               --title "chore: promote develop to main" \
-              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop."
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop.\n\nMerge method: **merge commit only** (do not squash)."
           else
             gh pr create -R "$GH_REPO" \
               --base main \
               --head develop \
               --title "chore: promote develop to main" \
-              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop."
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop.\n\nMerge method: **merge commit only** (do not squash)."
           fi
