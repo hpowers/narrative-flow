@@ -1,0 +1,55 @@
+name: Promote develop -> main
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if develop is ahead of main
+        id: compare
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          ahead=$(gh api repos/"$GH_REPO"/compare/main...develop --jq '.ahead_by')
+          file_count=$(gh api repos/"$GH_REPO"/compare/main...develop --jq '.files | length')
+          echo "ahead=$ahead" >> "$GITHUB_OUTPUT"
+          echo "file_count=$file_count" >> "$GITHUB_OUTPUT"
+
+      - name: Close empty promotion PR
+        if: steps.compare.outputs.ahead != '0' && steps.compare.outputs.file_count == '0'
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          pr_number=$(gh pr list -R "$GH_REPO" --base main --head develop --json number --jq '.[0].number')
+          if [ -n "$pr_number" ]; then
+            gh pr close -R "$GH_REPO" "$pr_number" \
+              --comment "Closing empty promotion PR (no file changes between develop and main)."
+          fi
+
+      - name: Create or update PR develop -> main
+        if: steps.compare.outputs.ahead != '0' && steps.compare.outputs.file_count != '0'
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          pr_number=$(gh pr list -R "$GH_REPO" --base main --head develop --json number --jq '.[0].number')
+          if [ -n "$pr_number" ]; then
+            gh pr edit -R "$GH_REPO" "$pr_number" \
+              --title "chore: promote develop to main" \
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop.\n\nMerge method: **merge commit only** (do not squash)."
+          else
+            gh pr create -R "$GH_REPO" \
+              --base main \
+              --head develop \
+              --title "chore: promote develop to main" \
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop.\n\nMerge method: **merge commit only** (do not squash)."
+          fi

@@ -1,0 +1,49 @@
+name: Back-merge main -> develop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".release-please-manifest.json"
+      - "CHANGELOG.md"
+      - "pyproject.toml"
+      - "narrative_flow/__init__.py"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  back_merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if main is ahead of develop
+        id: compare
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          ahead=$(gh api repos/"$GH_REPO"/compare/develop...main --jq '.ahead_by')
+          echo "ahead=$ahead" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update PR main -> develop
+        if: steps.compare.outputs.ahead != '0'
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          pr_number=$(gh pr list -R "$GH_REPO" --base develop --head main --json number --jq '.[0].number')
+          if [ -n "$pr_number" ]; then
+            gh pr edit -R "$GH_REPO" "$pr_number" \
+              --title "chore: back-merge main to develop" \
+              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: merge commit only (no squash)."
+          else
+            gh pr create -R "$GH_REPO" \
+              --base develop \
+              --head main \
+              --title "chore: back-merge main to develop" \
+              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: merge commit only (no squash)."
+            pr_number=$(gh pr list -R "$GH_REPO" --base develop --head main --json number --jq '.[0].number')
+          fi
+
+          gh pr merge -R "$GH_REPO" "$pr_number" --auto --merge
