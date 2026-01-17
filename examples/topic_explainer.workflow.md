@@ -13,8 +13,10 @@ inputs:
 outputs:
   - name: surprising_fact
     description: The most surprising fact about the topic
+    type: string
   - name: analogy
     description: A memorable analogy to explain the topic
+    type: string
 ---
 
 ## Get the Facts
@@ -27,7 +29,7 @@ Which of those facts do you think would be most surprising to the average person
 
 ## Extract: surprising_fact
 
-Extract the single most surprising fact in one clear sentence. Return only the sentence, no preamble.
+Extract the single most surprising fact in one clear sentence.
 
 ## Create an Analogy
 
@@ -35,4 +37,4 @@ Now I want to help people remember this. Can you create a memorable analogy that
 
 ## Extract: analogy
 
-Extract just the analogy itself in 1-2 sentences. Return only the analogy, no explanation of why it works.
+Extract just the analogy itself in 1-2 sentences.

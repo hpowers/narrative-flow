@@ -19,12 +19,16 @@ inputs:
 outputs:
   - name: title
     description: The blog post title
+    type: string
   - name: hook
     description: The opening hook paragraph
+    type: string
   - name: outline
     description: The full post outline
+    type: string
   - name: post
     description: The complete blog post
+    type: string
 ---
 
 ## Brainstorm Angles
@@ -43,7 +47,7 @@ Great. Based on that angle, give me 5 title options for this blog post. The tone
 
 ## Extract: title
 
-Extract the single best title from the options. Return only the title text, no numbering or explanation.
+Extract the single best title from the options.
 
 ## Write the Hook
 
@@ -59,7 +63,7 @@ Keep the {{ tone }} tone. This is for {{ audience }}.
 
 ## Extract: hook
 
-Extract just the hook paragraph. Return only the paragraph text.
+Extract just the hook paragraph.
 
 ## Create the Outline
 
@@ -73,7 +77,7 @@ Target length: 1500-2000 words when fully written.
 
 ## Extract: outline
 
-Extract the outline in a clean format. Use simple dashes for hierarchy. Return only the outline.
+Extract the outline in a clean format. Use simple dashes for hierarchy.
 
 ## Write the Post
 

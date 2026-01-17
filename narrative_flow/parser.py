@@ -11,6 +11,7 @@ from .models import (
     OutputVariable,
     Step,
     StepType,
+    ValueType,
     WorkflowDefinition,
 )
 
@@ -109,6 +110,7 @@ def parse_workflow(source: str | Path) -> WorkflowDefinition:
             OutputVariable(
                 name=out["name"],
                 description=out.get("description"),
+                type=_parse_value_type(out.get("type", ValueType.STRING.value)),
             )
         )
 
@@ -131,6 +133,19 @@ def parse_workflow(source: str | Path) -> WorkflowDefinition:
         outputs=outputs,
         steps=steps,
     )
+
+
+def _parse_value_type(value: object) -> ValueType:
+    """Parse and validate a ValueType from frontmatter."""
+    if not isinstance(value, str):
+        raise WorkflowParseError("Output type must be a string")
+
+    normalized = value.strip().lower()
+    try:
+        return ValueType(normalized)
+    except ValueError as e:
+        allowed = ", ".join(value_type.value for value_type in ValueType)
+        raise WorkflowParseError(f"Invalid output type '{value}'. Expected one of: {allowed}") from e
 
 
 def _parse_steps(body: str) -> list[Step]:

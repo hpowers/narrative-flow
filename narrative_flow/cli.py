@@ -87,7 +87,8 @@ def cmd_validate(args) -> int:
         print(f"   Conversation model: {workflow.models.conversation}")
         print(f"   Extraction model: {workflow.models.extraction}")
         print(f"   Inputs: {', '.join(i.name for i in workflow.inputs) or '(none)'}")
-        print(f"   Outputs: {', '.join(o.name for o in workflow.outputs) or '(none)'}")
+        outputs_display = ", ".join(f"{o.name} ({o.type.value})" for o in workflow.outputs)
+        print(f"   Outputs: {outputs_display or '(none)'}")
         print(f"   Steps: {len(workflow.steps)}")
         return 0
     except WorkflowParseError as e:
@@ -146,14 +147,22 @@ def cmd_run(args) -> int:
             print("✅ Workflow completed successfully")
             print("\nOutputs:")
             for name, value in result.outputs.items():
+                display_value = _format_output_value(value)
                 # Truncate long values for display
-                display_value = value if len(value) <= 100 else value[:100] + "..."
+                display_value = display_value if len(display_value) <= 100 else display_value[:100] + "..."
                 print(f"  {name}: {display_value}")
         else:
             print(f"❌ Workflow failed: {result.error}", file=sys.stderr)
             return 1
 
     return 0
+
+
+def _format_output_value(value: object) -> str:
+    """Format output values for CLI display."""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value)
+    return str(value)
 
 
 if __name__ == "__main__":

@@ -10,15 +10,11 @@ retries: 3
 
 inputs:
   - name: short_transcript
-    description: The transcript of the YouTube short
   - name: episode_transcript
-    description: The full podcast episode transcript
 
 outputs:
   - name: short_title
-    description: The generated title for the short
   - name: short_description
-    description: The generated description for the short
 ---
 
 ## MrBeast Titling Principles
@@ -55,7 +51,7 @@ Help me write the title for this YouTube short in accordance with Mr. Beast's be
 
 ## Extract: short_title
 
-Extract the single best suggested title from the response. Return only the title text—no quotes, no markdown formatting, no explanation.
+Extract the single best suggested title from the response.
 
 ## Generate Description
 
@@ -63,4 +59,4 @@ Great. I will go with `{{ short_title }}`. Now I need the perfect description to
 
 ## Extract: short_description
 
-Extract the single best suggested description from the response. Return only the description text—no quotes, no markdown formatting, no explanation.
+Extract the single best suggested description from the response.

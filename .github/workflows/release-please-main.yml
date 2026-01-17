@@ -1,8 +1,12 @@
-name: release-please (on develop)
+name: release-please (on main)
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
+    paths:
+      - ".release-please-manifest.json"
+      - "CHANGELOG.md"
+      - "pyproject.toml"
 
 permissions:
   contents: write
@@ -18,5 +22,5 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          target-branch: develop
-          skip-github-release: true
+          target-branch: main
+          skip-github-pull-request: true

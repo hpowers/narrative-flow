@@ -1,5 +1,6 @@
 """Logger for saving workflow execution results as Markdown."""
 
+import json
 import os
 import re
 from datetime import datetime
@@ -54,7 +55,7 @@ def generate_log(result: WorkflowResult, truncate_inputs: int | None = 500) -> s
         for name, value in result.outputs.items():
             lines.append(f"### {name}")
             lines.append("")
-            _append_code_block(lines, value)
+            _append_code_block(lines, _format_value(value))
             lines.append("")
     else:
         lines.append("*No outputs*")
@@ -92,7 +93,10 @@ def generate_log(result: WorkflowResult, truncate_inputs: int | None = 500) -> s
             lines.append("")
             lines.append(f"**Extracted Value (`{step.variable_name}`):**")
             lines.append("")
-            _append_code_block(lines, step_result.extracted_value or "*No value*")
+            if step_result.extracted_value is None:
+                _append_code_block(lines, "*No value*")
+            else:
+                _append_code_block(lines, _format_value(step_result.extracted_value))
             lines.append("")
 
         lines.append("---")
@@ -163,3 +167,10 @@ def _append_code_block(lines: list[str], value: str) -> None:
     lines.append(fence)
     lines.append(value)
     lines.append(fence)
+
+
+def _format_value(value: object) -> str:
+    """Format values for logging."""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, indent=2)
+    return str(value)

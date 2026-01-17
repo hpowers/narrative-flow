@@ -13,6 +13,7 @@ inputs:
 outputs:
   - name: tagline
     description: A short tagline for the product
+    type: string
 ---
 
 ## User
@@ -29,4 +30,4 @@ Now write a short, punchy tagline for {{ product }}.
 
 ## Extract: tagline
 
-Extract the tagline only. Return just the tagline with no extra text.
+Extract the tagline only.

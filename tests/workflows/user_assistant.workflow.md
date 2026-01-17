@@ -11,6 +11,7 @@ inputs:
 
 outputs:
   - name: takeaway
+    type: string
 ---
 
 ## User
