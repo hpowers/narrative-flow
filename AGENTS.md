@@ -100,6 +100,12 @@ pre-commit run --all-files
 - Do not use IDE lint output as a substitute for real commands.
 - Fix failures and re-run the full sequence until everything passes.
 
+## Contribution Flow (Agents)
+
+- Agents only create PRs targeting `develop` and use squash merge.
+- Never open PRs targeting `main`; promotion and back-merge PRs are automated.
+- See `CONTRIBUTING.md` for the full flow.
+
 ## Workflow File Format
 
 Workflow files use `.workflow.md` extension with YAML frontmatter:
