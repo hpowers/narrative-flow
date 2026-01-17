@@ -7,6 +7,14 @@ Release notes are generated from Conventional Commits and maintained automatical
 
 ---
 
+## [0.2.1](https://github.com/hpowers/narrative-flow/compare/v0.2.0...v0.2.1) (2026-01-17)
+
+
+### Bug Fixes
+
+* clarify README wording ([#22](https://github.com/hpowers/narrative-flow/issues/22)) ([eef63c1](https://github.com/hpowers/narrative-flow/commit/eef63c1cb8480ac7bf71f861c9fedf0da28a50d5))
+* **release:** sync version between pyproject.toml and __init__.py ([#20](https://github.com/hpowers/narrative-flow/issues/20)) ([376ff1b](https://github.com/hpowers/narrative-flow/commit/376ff1b30dd34f1fc3296aba40d1e5c83f765e4d))
+
 ## [0.2.0](https://github.com/hpowers/narrative-flow/compare/v0.1.0...v0.2.0) (2026-01-17)
 
 
