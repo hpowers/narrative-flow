@@ -1,8 +1,12 @@
 name: Promote develop -> main
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [develop]
+    paths:
+      - ".release-please-manifest.json"
+      - "CHANGELOG.md"
+      - "pyproject.toml"
 
 permissions:
   contents: write
@@ -10,7 +14,6 @@ permissions:
 
 jobs:
   promote:
-    if: ${{ github.event.release.target_commitish == 'develop' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
