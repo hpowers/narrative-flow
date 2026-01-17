@@ -36,7 +36,7 @@ from .models import (
 )
 from .parser import WorkflowParseError, parse_workflow
 
-__version__ = "0.0.0"  # x-release-please-version
+__version__ = "1.0.0"  # x-release-please-version
 
 __all__ = [
     # Main functions
