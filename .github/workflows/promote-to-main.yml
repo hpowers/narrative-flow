@@ -19,23 +19,25 @@ jobs:
       - name: Check if develop is ahead of main
         id: compare
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         run: |
-          ahead=$(gh api repos/${{ github.repository }}/compare/main...develop --jq '.ahead_by')
+          ahead=$(gh api repos/"$GH_REPO"/compare/main...develop --jq '.ahead_by')
           echo "ahead=$ahead" >> "$GITHUB_OUTPUT"
 
       - name: Create or update PR develop -> main
         if: steps.compare.outputs.ahead != '0'
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         run: |
-          pr_number=$(gh pr list --base main --head develop --json number --jq '.[0].number')
+          pr_number=$(gh pr list -R "$GH_REPO" --base main --head develop --json number --jq '.[0].number')
           if [ -n "$pr_number" ]; then
-            gh pr edit "$pr_number" \
+            gh pr edit -R "$GH_REPO" "$pr_number" \
               --title "chore: promote develop to main" \
               --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop."
           else
-            gh pr create \
+            gh pr create -R "$GH_REPO" \
               --base main \
               --head develop \
               --title "chore: promote develop to main" \
