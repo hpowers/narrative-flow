@@ -78,7 +78,7 @@ Which of those facts do you think is most surprising to most people, and why?
 Summarize the most surprising fact in one sentence.
 ```
 
-### 3. Run the workflow
+### 3. Run your workflow
 
 **From Python:**
 

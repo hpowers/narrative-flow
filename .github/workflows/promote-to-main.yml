@@ -3,10 +3,6 @@ name: Promote develop -> main
 on:
   push:
     branches: [develop]
-    paths:
-      - ".release-please-manifest.json"
-      - "CHANGELOG.md"
-      - "pyproject.toml"
 
 permissions:
   contents: write
