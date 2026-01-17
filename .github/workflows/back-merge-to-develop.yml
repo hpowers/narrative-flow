@@ -36,11 +36,14 @@ jobs:
           if [ -n "$pr_number" ]; then
             gh pr edit -R "$GH_REPO" "$pr_number" \
               --title "chore: back-merge main to develop" \
-              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: squash is OK."
+              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: merge commit only (no squash)."
           else
             gh pr create -R "$GH_REPO" \
               --base develop \
               --head main \
               --title "chore: back-merge main to develop" \
-              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: squash is OK."
+              --body "Automated back-merge PR to keep develop in sync with main after a release.\n\nMerge method: merge commit only (no squash)."
+            pr_number=$(gh pr list -R "$GH_REPO" --base develop --head main --json number --jq '.[0].number')
           fi
+
+          gh pr merge -R "$GH_REPO" "$pr_number" --auto --merge
