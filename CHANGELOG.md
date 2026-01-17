@@ -7,6 +7,13 @@ Release notes are generated from Conventional Commits and maintained automatical
 
 ---
 
+## [0.5.3](https://github.com/hpowers/narrative-flow/compare/v0.5.2...v0.5.3) (2026-01-17)
+
+
+### Bug Fixes
+
+* **readme:** mention promotion PR flow ([#44](https://github.com/hpowers/narrative-flow/issues/44)) ([cc712f4](https://github.com/hpowers/narrative-flow/commit/cc712f4ef30eac217a9a9f5e63c84ba418f56f9d))
+
 ## [0.5.2](https://github.com/hpowers/narrative-flow/compare/v0.5.1...v0.5.2) (2026-01-17)
 
 
