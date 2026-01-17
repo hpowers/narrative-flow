@@ -7,6 +7,13 @@ Release notes are generated from Conventional Commits and maintained automatical
 
 ---
 
+## [0.5.5](https://github.com/hpowers/narrative-flow/compare/v0.5.4...v0.5.5) (2026-01-17)
+
+
+### Bug Fixes
+
+* **readme:** clarify develop back-merge wording ([#54](https://github.com/hpowers/narrative-flow/issues/54)) ([b5fb68d](https://github.com/hpowers/narrative-flow/commit/b5fb68d780a5adb0489d745492b899d60b938838))
+
 ## [0.5.4](https://github.com/hpowers/narrative-flow/compare/v0.5.3...v0.5.4) (2026-01-17)
 
 
