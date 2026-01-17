@@ -16,18 +16,28 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: develop
+      - name: Check if develop is ahead of main
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          ahead=$(gh api repos/${{ github.repository }}/compare/main...develop --jq '.ahead_by')
+          echo "ahead=$ahead" >> "$GITHUB_OUTPUT"
 
       - name: Create or update PR develop -> main
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          base: main
-          branch: chore/promote-develop-to-main
-          title: "chore: promote develop to main"
-          body: |
-            Automated promotion PR to bring main up to date with develop.
-            This PR should typically be merged after a release is prepared/merged on develop.
+        if: steps.compare.outputs.ahead != '0'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          pr_number=$(gh pr list --base main --head develop --json number --jq '.[0].number')
+          if [ -n "$pr_number" ]; then
+            gh pr edit "$pr_number" \
+              --title "chore: promote develop to main" \
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop."
+          else
+            gh pr create \
+              --base main \
+              --head develop \
+              --title "chore: promote develop to main" \
+              --body "Automated promotion PR to bring main up to date with develop.\nThis PR should typically be merged after a release is prepared/merged on develop."
+          fi
