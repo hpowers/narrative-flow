@@ -13,7 +13,7 @@ Narrative Flow lets you define multi-turn LLM conversations in a simple Markdown
 - 📤 **Variable substitution** - Insert input values into prompts
 - 🎯 **Extraction** - Pull specific values from responses using a separate LLM call
 - 📊 **Execution logs** - Full conversation history saved as Markdown
-- 🚀 **Release automation** - Versioning and changelogs managed with release-please on main
+- 🚀 **Release automation** - Versioning and changelogs managed with release-please on main via promotion PRs
 
 ## Installation
 
