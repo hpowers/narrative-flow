@@ -264,6 +264,10 @@ narrative-flow run examples/blog_post_generator.workflow.md \
   --input audience="software engineers"
 ```
 
+## Contributing and Release Flow
+
+For the short, practical guide to feature branches, squash merges, promotion PRs, and release-please, see `CONTRIBUTING.md`.
+
 ## Development
 
 ```bash
