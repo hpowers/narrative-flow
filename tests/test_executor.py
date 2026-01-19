@@ -631,6 +631,29 @@ class TestExtractStep:
 
         assert result.outputs["value"] == "extracted value"
 
+    def test_extraction_strips_code_fences_for_string(
+        self,
+        httpx_mock: HTTPXMock,
+        api_key_env: None,
+    ):
+        """Extracted string outputs allow fenced JSON responses."""
+        workflow = WorkflowDefinition(
+            name="test",
+            models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
+            outputs=[OutputVariable(name="value", type=ValueType.STRING)],
+            steps=[
+                Step(type=StepType.MESSAGE, name="Ask", content="Hello"),
+                Step(type=StepType.EXTRACT, name="Extract: value", content="Extract", variable_name="value"),
+            ],
+        )
+
+        httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '```json\n"extracted value"\n```'}}]})
+
+        result = execute_workflow(workflow, {})
+
+        assert result.outputs["value"] == "extracted value"
+
     def test_extraction_parses_string_list(
         self,
         httpx_mock: HTTPXMock,
@@ -654,6 +677,29 @@ class TestExtractStep:
 
         assert result.outputs["items"] == ["alpha", "beta"]
         assert result.step_results[1].extracted_value == ["alpha", "beta"]
+
+    def test_extraction_strips_code_fences_for_list(
+        self,
+        httpx_mock: HTTPXMock,
+        api_key_env: None,
+    ):
+        """Extracted list outputs allow fenced JSON responses."""
+        workflow = WorkflowDefinition(
+            name="test",
+            models=ModelsConfig(conversation="openai/gpt-4o", extraction="openai/gpt-4o-mini"),
+            outputs=[OutputVariable(name="items", type=ValueType.STRING_LIST)],
+            steps=[
+                Step(type=StepType.MESSAGE, name="Ask", content="List items"),
+                Step(type=StepType.EXTRACT, name="Extract: items", content="Extract items", variable_name="items"),
+            ],
+        )
+
+        httpx_mock.add_response(json={"choices": [{"message": {"content": "Response"}}]})
+        httpx_mock.add_response(json={"choices": [{"message": {"content": '```\n["alpha", "beta"]\n```'}}]})
+
+        result = execute_workflow(workflow, {})
+
+        assert result.outputs["items"] == ["alpha", "beta"]
 
     def test_extraction_rejects_invalid_list_type(
         self,

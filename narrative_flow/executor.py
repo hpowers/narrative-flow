@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import time
 from typing import Any
 
@@ -21,6 +22,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+_CODE_FENCE_RE = re.compile(r"^```(?:[a-zA-Z0-9_-]+)?\s*(.*?)\s*```$", re.DOTALL)
 
 
 class WorkflowExecutionError(Exception):
@@ -432,7 +434,9 @@ def _render_extraction_type_instruction(expected_type: ValueType) -> str:
 
 def _parse_extracted_value(raw_value: str, expected_type: ValueType, variable_name: str) -> str | list[str]:
     """Parse and validate extracted JSON based on expected type."""
-    cleaned_value = raw_value.strip()
+    cleaned_value, stripped_fences = _strip_code_fences(raw_value)
+    if stripped_fences:
+        logger.debug("Extraction response contained code fences: variable=%s", variable_name)
     try:
         parsed_value = json.loads(cleaned_value)
     except json.JSONDecodeError as e:
@@ -458,3 +462,19 @@ def _parse_extracted_value(raw_value: str, expected_type: ValueType, variable_na
         )
 
     raise WorkflowExecutionError(f"Unsupported output type for '{variable_name}': {expected_type.value}")
+
+
+def _strip_code_fences(raw_value: str) -> tuple[str, bool]:
+    """Strip Markdown code fences from an extraction response if present.
+
+    Args:
+        raw_value: Raw extraction model response.
+
+    Returns:
+        A tuple of (cleaned_value, stripped_fences).
+    """
+    cleaned_value = raw_value.strip()
+    match = _CODE_FENCE_RE.match(cleaned_value)
+    if not match:
+        return cleaned_value, False
+    return match.group(1).strip(), True
