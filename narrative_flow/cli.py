@@ -3,11 +3,16 @@
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from .executor import execute_workflow
 from .logger import save_log
+from .logging_config import configure_logging
 from .parser import WorkflowParseError, parse_workflow
+from .utils import sanitize_filename_component
+
+_AUTO_LOG_FILE = "__AUTO__"
 
 
 def main():
@@ -26,6 +31,30 @@ Examples:
   # Validate a workflow file without running
   narrative-flow validate workflow.md
 """,
+    )
+
+    parser.add_argument(
+        "--log-level",
+        help="Log level for debug output (default: INFO). Overrides unless NARRATIVE_FLOW_LOG_LEVEL is set.",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging (same as --log-level DEBUG). Ignored if NARRATIVE_FLOW_LOG_LEVEL is set.",
+    )
+    parser.add_argument(
+        "--log-file",
+        nargs="?",
+        const=_AUTO_LOG_FILE,
+        help=(
+            "Write debug logs to the specified file. If provided without a path, a file is created "
+            "alongside execution logs."
+        ),
+    )
+    parser.add_argument(
+        "--log-payloads",
+        action="store_true",
+        help="Log prompt/response payloads (redacted and truncated). Use only for debugging.",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -71,6 +100,16 @@ Examples:
     validate_parser.add_argument("workflow", type=Path, help="Path to .workflow.md file")
 
     args = parser.parse_args()
+    log_file = _resolve_log_file(args)
+    try:
+        configure_logging(
+            log_level=args.log_level,
+            debug=args.debug,
+            log_file=log_file,
+            log_payloads=args.log_payloads,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.command == "validate":
         return cmd_validate(args)
@@ -163,6 +202,25 @@ def _format_output_value(value: object) -> str:
     if isinstance(value, (list, dict)):
         return json.dumps(value)
     return str(value)
+
+
+def _resolve_log_file(args) -> Path | None:
+    """Resolve a log file path for CLI logging."""
+    log_file = getattr(args, "log_file", None)
+    if log_file != _AUTO_LOG_FILE:
+        return Path(log_file).expanduser() if log_file else None
+
+    base_dir = Path(".")
+    log_dir = getattr(args, "log_dir", None)
+    if isinstance(log_dir, Path):
+        base_dir = log_dir
+
+    workflow_path = getattr(args, "workflow", None)
+    name_source = workflow_path.stem if isinstance(workflow_path, Path) else "workflow"
+
+    safe_name = sanitize_filename_component(name_source)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return base_dir / f"{safe_name}_{timestamp}.debug.log"
 
 
 if __name__ == "__main__":
