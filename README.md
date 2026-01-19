@@ -115,6 +115,44 @@ narrative-flow run my_workflow.workflow.md --inputs-file inputs.json
 narrative-flow validate my_workflow.workflow.md
 ```
 
+**Debug logging:**
+
+```bash
+# Enable debug logging for a single run
+narrative-flow --debug run my_workflow.workflow.md --input topic="octopuses"
+
+# Or set an explicit log level
+narrative-flow --log-level WARNING run my_workflow.workflow.md
+
+# Write debug logs to a file alongside execution logs
+narrative-flow --log-file run my_workflow.workflow.md --input topic="octopuses"
+
+# Include prompt/response payloads (redacted and truncated)
+narrative-flow --log-payloads --debug run my_workflow.workflow.md --input topic="octopuses"
+
+# Environment variable overrides CLI flags
+NARRATIVE_FLOW_LOG_LEVEL=DEBUG narrative-flow run my_workflow.workflow.md
+```
+
+**Debug logging from Python:**
+
+```python
+from narrative_flow import configure_logging
+
+configure_logging(
+    log_level="DEBUG",
+    log_file="logs/workflow.debug.log",
+    log_payloads=True,
+)
+```
+
+Environment variables:
+
+- `NARRATIVE_FLOW_LOG_LEVEL` (e.g., `DEBUG`)
+- `NARRATIVE_FLOW_LOG_PAYLOADS` (`true`/`false`)
+- `NARRATIVE_FLOW_LOG_FILE` (path to log file)
+- `NARRATIVE_FLOW_LOG_PAYLOAD_MAX_CHARS` (default: 2000)
+
 ## Workflow File Format
 
 ### Frontmatter

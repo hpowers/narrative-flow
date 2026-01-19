@@ -1,12 +1,11 @@
 """Logger for saving workflow execution results as Markdown."""
 
 import json
-import os
-import re
 from datetime import datetime
 from pathlib import Path
 
 from .models import StepType, WorkflowResult
+from .utils import sanitize_filename_component
 
 
 def generate_log(result: WorkflowResult, truncate_inputs: int | None = 500) -> str:
@@ -127,7 +126,7 @@ def save_log(
 
     if filename is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = _sanitize_filename_component(result.workflow_name)
+        safe_name = sanitize_filename_component(result.workflow_name)
         filename = f"{safe_name}_{timestamp}.log.md"
     else:
         filename_path = Path(filename)
@@ -143,20 +142,8 @@ def save_log(
 
 
 def _sanitize_filename_component(value: str) -> str:
-    """Sanitize a filename component for safe filesystem usage.
-
-    Args:
-        value: Raw value to sanitize.
-
-    Returns:
-        A safe filename component string.
-    """
-    cleaned = value.replace(os.sep, "_")
-    if os.altsep:
-        cleaned = cleaned.replace(os.altsep, "_")
-    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", cleaned)
-    cleaned = re.sub(r"\.{2,}", ".", cleaned).strip("._")
-    return cleaned or "workflow"
+    """Backwards-compatible alias for sanitize_filename_component."""
+    return sanitize_filename_component(value)
 
 
 def _append_code_block(lines: list[str], value: str) -> None:

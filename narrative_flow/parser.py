@@ -1,5 +1,6 @@
 """Parser for .workflow.md files."""
 
+import logging
 import re
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from .models import (
     ValueType,
     WorkflowDefinition,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowParseError(Exception):
@@ -39,8 +42,10 @@ def parse_workflow(source: str | Path) -> WorkflowDefinition:
         path = Path(source)
         if not path.exists():
             raise WorkflowParseError(f"Workflow file not found: {path}")
+        logger.debug("Parsing workflow from file: path=%s", path)
         content = path.read_text()
     else:
+        logger.debug("Parsing workflow from string content")
         content = source
 
     try:
@@ -116,6 +121,13 @@ def parse_workflow(source: str | Path) -> WorkflowDefinition:
 
     # Parse steps from body
     steps = _parse_steps(body)
+    logger.debug(
+        "Parsed workflow metadata: name=%s inputs=%s outputs=%s steps=%s",
+        metadata["name"],
+        len(inputs),
+        len(outputs),
+        len(steps),
+    )
 
     # Validate that all outputs have corresponding extract steps
     extract_vars = {s.variable_name for s in steps if s.type == StepType.EXTRACT}
