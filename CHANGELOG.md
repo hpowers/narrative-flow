@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/hpowers/narrative-flow/compare/v1.0.0...v1.1.0) (2026-01-20)
+
+
+### Features
+
+* add debug logging capabilities and configuration options ([#64](https://github.com/hpowers/narrative-flow/issues/64)) ([dc61e2b](https://github.com/hpowers/narrative-flow/commit/dc61e2bb21c3af55d4af5cc429164de4faf67b81))
+* implement code fence stripping for extracted values ([#66](https://github.com/hpowers/narrative-flow/issues/66)) ([8a582ae](https://github.com/hpowers/narrative-flow/commit/8a582ae86d945c1773bdf18da2e3f7b24a8d54ad))
+
 ## 1.0.0 (2026-01-17)
 
 
