@@ -22,6 +22,7 @@ Basic usage:
 
 from .executor import WorkflowExecutionError, execute_workflow
 from .logger import generate_log, save_log
+from .logging_config import configure_logging
 from .models import (
     InputVariable,
     Message,
@@ -44,6 +45,7 @@ __all__ = [
     "execute_workflow",
     "generate_log",
     "save_log",
+    "configure_logging",
     # Models
     "WorkflowDefinition",
     "WorkflowResult",

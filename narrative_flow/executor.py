@@ -1,13 +1,16 @@
 """Executor for running workflows via OpenRouter."""
 
 import json
+import logging
 import os
+import re
 import time
 from typing import Any
 
 import httpx
 from jinja2 import StrictUndefined, Template, UndefinedError
 
+from .logging_config import format_messages, format_payload, should_log_payloads
 from .models import (
     Message,
     Step,
@@ -17,6 +20,9 @@ from .models import (
     WorkflowDefinition,
     WorkflowResult,
 )
+
+logger = logging.getLogger(__name__)
+_CODE_FENCE_RE = re.compile(r"^```(?:[a-zA-Z0-9_-]+)?\s*(.*?)\s*```$", re.DOTALL)
 
 
 class WorkflowExecutionError(Exception):
@@ -53,6 +59,23 @@ class OpenRouterClient:
         Returns:
             The assistant's response content.
         """
+        message_count = len(messages)
+        total_content_length = sum(len(message.get("content", "")) for message in messages)
+        role_counts: dict[str, int] = {}
+        for message in messages:
+            role = message.get("role", "unknown")
+            role_counts[role] = role_counts.get(role, 0) + 1
+        logger.debug(
+            "OpenRouter request prepared: model=%s messages=%s roles=%s content_chars=%s retries=%s",
+            model,
+            message_count,
+            role_counts,
+            total_content_length,
+            retries,
+        )
+        if should_log_payloads():
+            logger.debug("OpenRouter request payload: %s", format_messages(messages))
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -68,6 +91,7 @@ class OpenRouterClient:
         last_error = None
         for attempt in range(retries + 1):
             try:
+                logger.debug("OpenRouter request attempt %s/%s", attempt + 1, retries + 1)
                 with httpx.Client(timeout=120.0) as client:
                     response = client.post(
                         self.BASE_URL,
@@ -76,15 +100,30 @@ class OpenRouterClient:
                     )
                     response.raise_for_status()
                     data = response.json()
-                    return data["choices"][0]["message"]["content"]
+                    logger.debug(
+                        "OpenRouter response received: status=%s response_chars=%s",
+                        response.status_code,
+                        len(response.text),
+                    )
+                    content = data["choices"][0]["message"]["content"]
+                    if should_log_payloads():
+                        logger.debug("OpenRouter response content: %s", format_payload(content))
+                    return content
             except httpx.HTTPStatusError as e:
                 last_error = e
+                logger.debug(
+                    "OpenRouter HTTP status error: status=%s attempt=%s",
+                    e.response.status_code,
+                    attempt + 1,
+                )
                 if e.response.status_code == 429:
                     # Rate limited, wait and retry
                     wait_time = 2**attempt
+                    logger.debug("OpenRouter rate limited: waiting %s seconds", wait_time)
                     time.sleep(wait_time)
                 elif e.response.status_code >= 500:
                     # Server error, retry
+                    logger.debug("OpenRouter server error: retrying after 1 second")
                     time.sleep(1)
                 else:
                     # Client error, don't retry
@@ -93,6 +132,7 @@ class OpenRouterClient:
                     ) from e
             except httpx.RequestError as e:
                 last_error = e
+                logger.debug("OpenRouter request error: %s", e)
                 time.sleep(1)
 
         raise WorkflowExecutionError(f"Failed after {retries + 1} attempts: {last_error}")
@@ -126,6 +166,14 @@ def execute_workflow(
         variables = dict(inputs_copy)
         output_types = {output.name: output.type for output in workflow.outputs}
         client: OpenRouterClient | None = None
+        logger.debug(
+            "Executing workflow: name=%s steps=%s inputs=%s outputs=%s retries=%s",
+            workflow.name,
+            len(workflow.steps),
+            list(inputs_copy.keys()),
+            workflow.get_output_names(),
+            workflow.retries,
+        )
 
         def _get_client() -> OpenRouterClient:
             """Create an OpenRouter client only when needed."""
@@ -135,6 +183,7 @@ def execute_workflow(
             return client
 
         for step in workflow.steps:
+            logger.debug("Executing step: name=%s type=%s", step.name, step.type.value)
             if step.type in {StepType.MESSAGE, StepType.USER}:
                 result = _execute_message_step(
                     step=step,
@@ -165,6 +214,7 @@ def execute_workflow(
 
         # Collect outputs
         outputs = {name: variables[name] for name in workflow.get_output_names()}
+        logger.debug("Workflow completed: name=%s outputs=%s", workflow.name, list(outputs.keys()))
 
         return WorkflowResult(
             workflow_name=workflow.name,
@@ -195,9 +245,15 @@ def execute_workflow(
 def _render_template(content: str, variables: dict[str, Any]) -> str:
     """Render Jinja2 template with variables."""
     try:
+        logger.debug(
+            "Rendering template: content_chars=%s variables=%s",
+            len(content),
+            list(variables.keys()),
+        )
         template = Template(content, undefined=StrictUndefined)
         return template.render(**variables)
     except UndefinedError as e:
+        logger.debug("Template rendering failed: %s", e)
         raise WorkflowExecutionError(f"Undefined variable in template: {e}") from e
 
 
@@ -216,12 +272,14 @@ def _apply_input_defaults(workflow: WorkflowDefinition, inputs: dict[str, Any]) 
         if inp.name in inputs:
             continue
         if inp.default is not None:
+            logger.debug("Applying default for input: name=%s", inp.name)
             inputs[inp.name] = inp.default
         elif inp.required:
             missing_required.append(inp.name)
 
     if missing_required:
         missing_list = ", ".join(missing_required)
+        logger.debug("Missing required inputs: %s", missing_list)
         raise WorkflowExecutionError(f"Missing required inputs: {missing_list}")
 
 
@@ -236,6 +294,12 @@ def _execute_message_step(
     """Execute a message step."""
     # Render the message content with variables
     rendered_content = _render_template(step.content, variables)
+    logger.debug(
+        "Message step rendered: name=%s content_chars=%s history_before=%s",
+        step.name,
+        len(rendered_content),
+        len(conversation_history),
+    )
 
     # Add user message to history
     user_message = Message(role="user", content=rendered_content)
@@ -246,6 +310,12 @@ def _execute_message_step(
 
     # Call the API
     response_content = client.chat(model=model, messages=api_messages, retries=retries)
+    logger.debug(
+        "Message step response: name=%s response_chars=%s history_after=%s",
+        step.name,
+        len(response_content),
+        len(conversation_history) + 1,
+    )
 
     # Add assistant response to history
     assistant_message = Message(role="assistant", content=response_content)
@@ -265,6 +335,14 @@ def _execute_assistant_step(
 ) -> StepResult:
     """Insert a predefined assistant message into the conversation history."""
     rendered_content = _render_template(step.content, variables)
+    logger.debug(
+        "Assistant step inserted: name=%s content_chars=%s history_before=%s",
+        step.name,
+        len(rendered_content),
+        len(conversation_history),
+    )
+    if should_log_payloads():
+        logger.debug("Assistant step content: %s", format_payload(rendered_content))
     assistant_message = Message(role="assistant", content=rendered_content)
     conversation_history.append(assistant_message)
 
@@ -314,11 +392,28 @@ Return ONLY valid JSON {type_instruction} with no additional text, explanation, 
 
     # Call extraction model (single turn, no history)
     api_messages = [{"role": "user", "content": extraction_prompt}]
+    logger.debug(
+        "Extraction prompt prepared: name=%s expected_type=%s prompt_chars=%s",
+        step.name,
+        expected_type.value,
+        len(extraction_prompt),
+    )
     extracted_value = client.chat(model=model, messages=api_messages, retries=retries)
+    logger.debug(
+        "Extraction response received: name=%s response_chars=%s",
+        step.name,
+        len(extracted_value),
+    )
     parsed_value = _parse_extracted_value(extracted_value, expected_type, step.variable_name or "unknown")
 
     # Store in variables
     variables[step.variable_name] = parsed_value
+    logger.debug(
+        "Extraction parsed: name=%s variable=%s type=%s",
+        step.name,
+        step.variable_name,
+        expected_type.value,
+    )
 
     return StepResult(
         step=step,
@@ -339,10 +434,17 @@ def _render_extraction_type_instruction(expected_type: ValueType) -> str:
 
 def _parse_extracted_value(raw_value: str, expected_type: ValueType, variable_name: str) -> str | list[str]:
     """Parse and validate extracted JSON based on expected type."""
-    cleaned_value = raw_value.strip()
+    cleaned_value, stripped_fences = _strip_code_fences(raw_value)
+    if stripped_fences:
+        logger.debug("Extraction response contained code fences: variable=%s", variable_name)
     try:
         parsed_value = json.loads(cleaned_value)
     except json.JSONDecodeError as e:
+        logger.debug(
+            "Extraction JSON parse failed: variable=%s error=%s",
+            variable_name,
+            e.msg,
+        )
         raise WorkflowExecutionError(f"Extraction for '{variable_name}' returned invalid JSON: {e.msg}") from e
 
     if expected_type == ValueType.STRING:
@@ -360,3 +462,19 @@ def _parse_extracted_value(raw_value: str, expected_type: ValueType, variable_na
         )
 
     raise WorkflowExecutionError(f"Unsupported output type for '{variable_name}': {expected_type.value}")
+
+
+def _strip_code_fences(raw_value: str) -> tuple[str, bool]:
+    """Strip Markdown code fences from an extraction response if present.
+
+    Args:
+        raw_value: Raw extraction model response.
+
+    Returns:
+        A tuple of (cleaned_value, stripped_fences).
+    """
+    cleaned_value = raw_value.strip()
+    match = _CODE_FENCE_RE.match(cleaned_value)
+    if not match:
+        return cleaned_value, False
+    return match.group(1).strip(), True
